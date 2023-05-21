@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
 #include <unistd.h>
 pthread_key_t global_sched_key;
 static pthread_once_t sched_key_once = PTHREAD_ONCE_INIT;
@@ -67,6 +68,16 @@ int schedule_create(int stack_size) {
 
     // epoll来管理事件
     sched->poller_fd = epoll_create(1024);
+    // 专门用于事件通知的文件描述符 eventfd, 将其挂在epoll_fd上,
+    // todo: 这个是做什么用的呢？可能是计数使用
+    if (!sched->eventfd) {
+        sched->eventfd = eventfd(0, EFD_NONBLOCK);
+    }
+    struct epoll_event ev;
+    ev.events = EPOLLIN;
+    ev.data.fd = sched->eventfd;
+    int ret = epoll_ctl(sched->poller_fd, EPOLL_CTL_ADD, sched->eventfd, &ev);
+
     // 注册触发器
     // 栈大小，默认64K
     sched->stack_size = stack_size ? stack_size : (64 * 1024);

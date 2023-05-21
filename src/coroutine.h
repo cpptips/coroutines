@@ -19,6 +19,8 @@ typedef struct schedule_t {
 
     // epoll
     int poller_fd;
+    int eventfd;
+    struct epoll_event eventlist[1024 * 1024];
 
     int corouties;
 } schedule_t;
